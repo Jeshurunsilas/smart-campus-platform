@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
   const isStudentRoute = pathname.startsWith("/student");
   const isFacultyRoute = pathname.startsWith("/faculty");
   const isAdminRoute = pathname.startsWith("/admin");
-  const isStaffRoute = pathname.startsWith("/staff");
+  const isStaffRoute = pathname.startsWith("/staff") || pathname.startsWith("/department");
   const isProtectedRoute = isStudentRoute || isFacultyRoute || isAdminRoute || isStaffRoute;
 
   // Unauthenticated user attempting to access protected route

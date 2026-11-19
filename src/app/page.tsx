@@ -36,7 +36,7 @@ export default function HomePage() {
       title: "Staff Dispatch",
       description:
         "Accept field assignments, capture resolution proof photos, provide internal notes, and complete work orders.",
-      href: "/staff",
+      href: "/department",
       icon: Wrench,
       color: "bg-amber-50 text-amber-700 border-amber-200",
       badge: "Staff Access",
