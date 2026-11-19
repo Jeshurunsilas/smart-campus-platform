@@ -6,6 +6,7 @@ import { DEMO_PENDING_APPROVALS } from "@/lib/demo-data";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
+import { approveUserAccount, rejectUserAccount } from "@/lib/services/profiles";
 import {
   CheckCircle2,
   FileCheck,
@@ -32,19 +33,31 @@ export default function AdminApprovalsPage() {
   const [selectedUser, setSelectedUser] = useState<PendingApprovalItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const handleApprove = (id: string, name: string) => {
-    setApprovals((prev) => prev.filter((a) => a.id !== id));
-    setActionSuccess(`Account for ${name} has been approved and granted system access.`);
-    setTimeout(() => setActionSuccess(null), 3500);
+  const handleApprove = async (id: string, name: string) => {
+    try {
+      await approveUserAccount(id);
+      setApprovals((prev) => prev.filter((a) => a.id !== id));
+      setActionSuccess(`Account for ${name} has been approved and granted system access.`);
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to approve account.";
+      setActionSuccess(`Error approving account: ${msg}`);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedUser) return;
-    setApprovals((prev) => prev.filter((a) => a.id !== selectedUser.id));
-    setActionSuccess(`Registration for ${selectedUser.full_name} was rejected.`);
-    setSelectedUser(null);
-    setRejectReason("");
-    setTimeout(() => setActionSuccess(null), 3500);
+    try {
+      await rejectUserAccount(selectedUser.id, rejectReason);
+      setApprovals((prev) => prev.filter((a) => a.id !== selectedUser.id));
+      setActionSuccess(`Registration for ${selectedUser.full_name} was rejected.`);
+      setSelectedUser(null);
+      setRejectReason("");
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to reject account.";
+      setActionSuccess(`Error rejecting account: ${msg}`);
+    }
   };
 
   return (

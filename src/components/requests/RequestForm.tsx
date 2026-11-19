@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { createServiceRequest } from "@/lib/services/requests";
 import {
   QrCode,
   Sparkles,
@@ -115,17 +116,32 @@ export function RequestForm({
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const generatedTrack = `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      setCreatedTrackingNumber(generatedTrack);
+    try {
+      const selectedLoc = DEMO_LOCATIONS.find((l) => l.room_number?.toLowerCase().includes(roomNumber.toLowerCase())) || DEMO_LOCATIONS[0];
+      const res = await createServiceRequest({
+        title,
+        description,
+        departmentId,
+        categoryId,
+        locationId: selectedLoc.id,
+        severity,
+        priority: computedSuggestedPriority,
+      });
+
+      const trackNumber = res.data?.request_number || `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      setCreatedTrackingNumber(trackNumber);
       setIsSuccess(true);
-    }, 800);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create service request.";
+      setErrors({ form: msg });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Success Confirmation Screen

@@ -11,7 +11,7 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // If Supabase environment variables are not yet configured, allow public navigation
+  // If Supabase environment variables are not yet configured, allow demonstration navigation
   if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes("placeholder")) {
     return response;
   }
@@ -39,7 +39,6 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Protected route prefixes
   const isStudentRoute = pathname.startsWith("/student");
   const isFacultyRoute = pathname.startsWith("/faculty");
   const isAdminRoute = pathname.startsWith("/admin");
@@ -54,18 +53,49 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Role & Approval verification for authenticated users
+  if (isProtectedRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, approval_status")
+      .eq("id", user.id)
+      .single();
+
+    if (profile) {
+      // Gate 1: Check Approval Status
+      if (profile.approval_status !== "approved") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "account_pending_approval");
+        return NextResponse.redirect(url);
+      }
+
+      // Gate 2: Strict Role Access Isolation
+      const userRole = profile.role;
+      if (isAdminRoute && userRole !== "administrator") {
+        const fallback = userRole === "faculty" ? "/faculty/dashboard" : userRole === "department_staff" ? "/department/dashboard" : "/student/dashboard";
+        return NextResponse.redirect(new URL(fallback, request.url));
+      }
+      if (isStudentRoute && userRole !== "student" && userRole !== "administrator") {
+        const fallback = userRole === "faculty" ? "/faculty/dashboard" : "/department/dashboard";
+        return NextResponse.redirect(new URL(fallback, request.url));
+      }
+      if (isFacultyRoute && userRole !== "faculty" && userRole !== "administrator") {
+        const fallback = userRole === "student" ? "/student/dashboard" : "/department/dashboard";
+        return NextResponse.redirect(new URL(fallback, request.url));
+      }
+      if (isStaffRoute && userRole !== "department_staff" && userRole !== "administrator") {
+        const fallback = userRole === "student" ? "/student/dashboard" : "/faculty/dashboard";
+        return NextResponse.redirect(new URL(fallback, request.url));
+      }
+    }
+  }
+
   return response;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public assets
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

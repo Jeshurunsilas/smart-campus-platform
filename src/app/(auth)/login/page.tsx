@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { signInWithEmail } from "@/lib/services/auth";
 import {
   GraduationCap,
   Briefcase,
@@ -16,19 +17,25 @@ import {
   Mail,
   ArrowRight,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("alex.morgan@campus.edu");
   const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    searchParams.get("error") === "account_pending_approval"
+      ? "Your account is currently pending administrator verification. Please check back later."
+      : ""
+  );
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -39,22 +46,41 @@ export default function LoginPage() {
 
     setIsLoading(true);
 
-    // Frontend demo routing based on email or default
-    setTimeout(() => {
-      setIsLoading(false);
-      if (email.includes("faculty")) {
-        router.push("/faculty/dashboard");
-      } else if (email.includes("staff")) {
-        router.push("/department/dashboard");
-      } else if (email.includes("admin")) {
-        router.push("/admin/dashboard");
+    try {
+      const result = await signInWithEmail(email, password);
+
+      if (result.isDemo) {
+        if (result.demoRole === "faculty") {
+          router.push("/faculty/dashboard");
+        } else if (result.demoRole === "staff") {
+          router.push("/department/dashboard");
+        } else if (result.demoRole === "administrator") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/student/dashboard");
+        }
+      } else if (result.profile) {
+        const role = result.profile.role;
+        if (role === "faculty") {
+          router.push("/faculty/dashboard");
+        } else if (role === "department_staff") {
+          router.push("/department/dashboard");
+        } else if (role === "administrator") {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/student/dashboard");
+        }
       } else {
         router.push("/student/dashboard");
       }
-    }, 600);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Authentication failed. Please check your credentials.";
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Quick Demo Autofill presets for testing
   const selectDemoRole = (role: "student" | "faculty" | "staff" | "admin") => {
     if (role === "student") {
       setEmail("alex.morgan@campus.edu");
@@ -96,7 +122,7 @@ export default function LoginPage() {
         <div className="mb-4 p-4 rounded-2xl bg-teal-50 border border-teal-200/90 shadow-2xs">
           <div className="flex items-center gap-1.5 text-xs font-bold text-teal-900 mb-2">
             <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-            Phase 2 Demo Account Quick-Fill:
+            Phase 3 Authentication Quick-Fill:
           </div>
           <div className="grid grid-cols-4 gap-1.5 text-[11px]">
             <button
@@ -138,8 +164,9 @@ export default function LoginPage() {
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-xs">
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
-                {error}
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
@@ -223,5 +250,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center text-xs text-slate-500">Loading portal...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }

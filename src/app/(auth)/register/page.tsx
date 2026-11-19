@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { DEMO_DEPARTMENTS } from "@/lib/demo-data";
+import { signUpStudent, signUpFaculty } from "@/lib/services/auth";
 import {
   GraduationCap,
   Briefcase,
@@ -16,6 +17,7 @@ import {
   ArrowRight,
   CheckCircle2,
   BadgeAlert,
+  AlertCircle,
 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -24,12 +26,13 @@ export default function RegisterPage() {
   const [role, setRole] = useState<"student" | "faculty">("student");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [identifier, setIdentifier] = useState(""); // Student ID or Faculty ID
+  const [identifier, setIdentifier] = useState("");
   const [departmentId, setDepartmentId] = useState(DEMO_DEPARTMENTS[0].id);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -55,15 +58,38 @@ export default function RegisterPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError("");
     if (!validate()) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      if (role === "student") {
+        await signUpStudent({
+          email,
+          password,
+          fullName,
+          registrationNumber: identifier,
+          departmentId,
+        });
+      } else {
+        await signUpFaculty({
+          email,
+          password,
+          fullName,
+          facultyId: identifier,
+          departmentId,
+        });
+      }
       setIsSubmitted(true);
-    }, 700);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed. Please check your inputs.";
+      setApiError(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {
@@ -156,6 +182,13 @@ export default function RegisterPage() {
         {/* Registration Card */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
           <form onSubmit={handleRegister} className="space-y-4">
+            {apiError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{apiError}</span>
+              </div>
+            )}
+
             <Input
               label="Full Name"
               required

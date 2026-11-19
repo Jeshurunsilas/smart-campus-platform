@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { DEMO_REQUESTS, DEMO_USERS } from "@/lib/demo-data";
 import { ServiceRequest, RequestStatus } from "@/types";
 import { formatDate } from "@/lib/utils";
+import { updateServiceRequestStatus } from "@/lib/services/requests";
 import {
   Wrench,
   Clock,
@@ -49,28 +50,40 @@ export default function DepartmentDashboardPage() {
     (r) => r.status === "Resolved" || r.status === "Closed"
   ).length;
 
-  const handleUpdateStatus = (e: React.FormEvent) => {
+  const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!updatingRequest) return;
 
-    setRequests((prev) =>
-      prev.map((r) =>
-        r.id === updatingRequest.id
-          ? {
-              ...r,
-              status: newStatus,
-              resolved_at: newStatus === "Resolved" ? new Date().toISOString() : r.resolved_at,
-              updated_at: new Date().toISOString(),
-            }
-          : r
-      )
-    );
+    try {
+      await updateServiceRequestStatus(
+        updatingRequest.id,
+        newStatus,
+        workNotes,
+        updatingRequest.status
+      );
 
-    setSuccessMsg(`Ticket ${updatingRequest.tracking_number} updated to ${newStatus}.`);
-    setUpdatingRequest(null);
-    setWorkNotes("");
-    setPhotoName("");
-    setTimeout(() => setSuccessMsg(""), 3500);
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === updatingRequest.id
+            ? {
+                ...r,
+                status: newStatus,
+                resolved_at: newStatus === "Resolved" ? new Date().toISOString() : r.resolved_at,
+                updated_at: new Date().toISOString(),
+              }
+            : r
+        )
+      );
+
+      setSuccessMsg(`Ticket ${updatingRequest.tracking_number} updated to ${newStatus}.`);
+      setUpdatingRequest(null);
+      setWorkNotes("");
+      setPhotoName("");
+      setTimeout(() => setSuccessMsg(""), 3500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update status.";
+      setSuccessMsg(`Failed to update status: ${msg}`);
+    }
   };
 
   return (
