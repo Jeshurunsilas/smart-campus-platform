@@ -11,17 +11,33 @@ interface AnnouncementRow {
   created_at: string;
 }
 
-export async function getCampusAnnouncements(): Promise<CampusAnnouncement[]> {
+export async function getCampusAnnouncements(
+  targetRole?: "student" | "faculty" | "all"
+): Promise<CampusAnnouncement[]> {
   if (!isSupabaseConfigured()) {
-    return DEMO_ANNOUNCEMENTS;
+    if (!targetRole || targetRole === "all") {
+      return DEMO_ANNOUNCEMENTS;
+    }
+    return DEMO_ANNOUNCEMENTS.filter((a) => {
+      const roles = a.target_roles || [];
+      return (
+        roles.includes(targetRole) ||
+        roles.includes("all" as unknown as typeof targetRole)
+      );
+    });
   }
 
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("announcements")
     .select("*")
     .order("created_at", { ascending: false });
 
+  if (targetRole && targetRole !== "all") {
+    query = query.or(`target_audience.eq.all,target_audience.eq.${targetRole}`);
+  }
+
+  const { data, error } = await query;
   if (error || !data) {
     return DEMO_ANNOUNCEMENTS;
   }
@@ -34,7 +50,10 @@ export async function getCampusAnnouncements(): Promise<CampusAnnouncement[]> {
     content: a.content,
     category: "General",
     priority: "medium",
-    target_roles: ["student", "faculty"],
+    target_roles:
+      a.target_audience === "all"
+        ? ["student", "faculty"]
+        : [a.target_audience as "student" | "faculty"],
     published_by: a.created_by,
     is_published: true,
     created_at: a.created_at,

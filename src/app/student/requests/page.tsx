@@ -1,17 +1,55 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { RequestTable } from "@/components/requests/RequestTable";
 import { Button } from "@/components/ui/Button";
 import { DEMO_REQUESTS } from "@/lib/demo-data";
-import { PlusCircle } from "lucide-react";
+import { ServiceRequest } from "@/types";
+import { getUserServiceRequests } from "@/lib/services/requests";
+import { PlusCircle, Loader2 } from "lucide-react";
 
 export default function StudentRequestsPage() {
-  const studentRequests = DEMO_REQUESTS.filter(
-    (r) => r.user_id === "usr-student-01"
+  const [requests, setRequests] = useState<ServiceRequest[]>(
+    DEMO_REQUESTS.filter((r) => r.user_id === "usr-student-01")
   );
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchRequests = useCallback(() => {
+    getUserServiceRequests()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setRequests(data);
+        }
+      })
+      .catch(() => {
+        // Fallback
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    getUserServiceRequests()
+      .then((data) => {
+        if (isMounted && data && data.length > 0) {
+          setRequests(data);
+        }
+      })
+      .catch(() => {
+        // Fallback
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <DashboardShell role="student">
@@ -36,11 +74,21 @@ export default function StudentRequestsPage() {
         </Link>
       </div>
 
-      <RequestTable
-        requests={studentRequests}
-        title="All My Requests"
-        showDepartment={true}
-      />
+      {isLoading ? (
+        <div className="py-16 flex items-center justify-center gap-3 text-slate-500 text-xs">
+          <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
+          <span>Loading service request history...</span>
+        </div>
+      ) : (
+        <RequestTable
+          requests={requests}
+          title="All My Requests"
+          showDepartment={true}
+          onRequestCancelled={() => {
+            fetchRequests();
+          }}
+        />
+      )}
     </DashboardShell>
   );
 }

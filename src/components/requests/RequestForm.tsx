@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { RequestSeverity, RequestPriority } from "@/types";
+import Image from "next/image";
+import { RequestSeverity, RequestPriority, Department, ServiceCategory, CampusLocation } from "@/types";
 import {
   DEMO_DEPARTMENTS,
   DEMO_CATEGORIES,
@@ -13,6 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { createServiceRequest } from "@/lib/services/requests";
+import { getDepartments, getServiceCategories, getCampusLocations } from "@/lib/services/departments";
+import { validateImageFile, uploadServiceRequestImage } from "@/lib/services/storage";
 import {
   QrCode,
   Sparkles,
@@ -22,6 +25,7 @@ import {
   ArrowRight,
   X,
   FileText,
+  AlertCircle,
 } from "lucide-react";
 
 interface RequestFormProps {
@@ -37,25 +41,57 @@ export function RequestForm({
 }: RequestFormProps) {
   const router = useRouter();
 
+  // Dynamic Lookup Data
+  const [departments, setDepartments] = useState<Department[]>(DEMO_DEPARTMENTS);
+  const [categories, setCategories] = useState<ServiceCategory[]>(DEMO_CATEGORIES);
+  const [locations, setLocations] = useState<CampusLocation[]>(DEMO_LOCATIONS);
+
   // Form Fields
   const [title, setTitle] = useState("");
   const [departmentId, setDepartmentId] = useState(defaultDepartmentId || DEMO_DEPARTMENTS[0].id);
   const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
   const [building, setBuilding] = useState("");
+  const [floor, setFloor] = useState("Floor 2");
   const [roomNumber, setRoomNumber] = useState("");
   const [severity, setSeverity] = useState<RequestSeverity>("Medium");
   const [description, setDescription] = useState("");
-  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+
+  // Photograph Upload State
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // QR State
   const [qrScanned, setQrScanned] = useState(false);
 
-  // States
+  // Submission States
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdTrackingNumber, setCreatedTrackingNumber] = useState("");
 
-  // Categories filtered by chosen department
-  const availableCategories = DEMO_CATEGORIES.filter(
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      getDepartments(),
+      getServiceCategories(),
+      getCampusLocations(),
+    ]).then(([depts, cats, locs]) => {
+      if (mounted) {
+        if (depts.length > 0) setDepartments(depts);
+        if (cats.length > 0) setCategories(cats);
+        if (locs.length > 0) setLocations(locs);
+      }
+    }).catch(() => {
+      // Keep demo fallbacks
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Filtered categories for selected department
+  const availableCategories = categories.filter(
     (c) => c.department_id === departmentId
   );
 
@@ -81,24 +117,44 @@ export function RequestForm({
 
   // Simulate QR Code Scan
   const handleSimulateQrScan = () => {
-    const sampleLoc = DEMO_LOCATIONS[1]; // Engineering Block A, Room 204
+    const sampleLoc = locations[1] || DEMO_LOCATIONS[1];
     setBuilding(sampleLoc.building);
+    setFloor(sampleLoc.floor || "Floor 2");
     setRoomNumber(sampleLoc.room_number || "Room 204");
     setQrScanned(true);
   };
 
-  // Simulate File Upload
+  // Handle Photograph Selection with Validation
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhotoError(null);
     if (e.target.files && e.target.files[0]) {
-      const fileName = e.target.files[0].name;
-      setUploadedPhotos((prev) => [...prev, fileName]);
+      const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.isValid) {
+        setPhotoError(validation.error || "Invalid photograph file.");
+        return;
+      }
+      setSelectedPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedPhoto(null);
+    if (photoPreview) {
+      URL.revokeObjectURL(photoPreview);
+      setPhotoPreview(null);
+    }
+    setPhotoError(null);
   };
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!title.trim() || title.length < 5) {
+    if (!title.trim() || title.trim().length < 5) {
       errs.title = "Title must be at least 5 characters.";
+    }
+    if (!departmentId) {
+      errs.departmentId = "Please select a responsible department.";
     }
     if (!categoryId) {
       errs.categoryId = "Please select an issue category.";
@@ -107,9 +163,9 @@ export function RequestForm({
       errs.building = "Campus building name is required.";
     }
     if (!roomNumber.trim()) {
-      errs.roomNumber = "Classroom / laboratory / room number is required.";
+      errs.roomNumber = "Room / laboratory number is required.";
     }
-    if (!description.trim() || description.length < 15) {
+    if (!description.trim() || description.trim().length < 15) {
       errs.description = "Please provide an issue description (minimum 15 characters).";
     }
     setErrors(errs);
@@ -118,22 +174,43 @@ export function RequestForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent duplicate rapid clicks
     if (!validate()) return;
 
     setIsSubmitting(true);
+    setErrors({});
+
     try {
-      const selectedLoc = DEMO_LOCATIONS.find((l) => l.room_number?.toLowerCase().includes(roomNumber.toLowerCase())) || DEMO_LOCATIONS[0];
+      // 1. Upload photograph if attached
+      let uploadedImageUrl: string | undefined;
+      if (selectedPhoto) {
+        uploadedImageUrl = await uploadServiceRequestImage(selectedPhoto);
+      }
+
+      // 2. Resolve campus location
+      const matchedLoc =
+        locations.find(
+          (l) =>
+            l.room_number?.toLowerCase() === roomNumber.toLowerCase() &&
+            l.building.toLowerCase() === building.toLowerCase()
+        ) || locations[0] || DEMO_LOCATIONS[0];
+
+      // 3. Create service request
       const res = await createServiceRequest({
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         departmentId,
         categoryId,
-        locationId: selectedLoc.id,
+        locationId: matchedLoc.id,
         severity,
         priority: computedSuggestedPriority,
+        imageUrl: uploadedImageUrl,
       });
 
-      const trackNumber = res.data?.request_number || `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const trackNumber =
+        res.data?.request_number ||
+        `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
       setCreatedTrackingNumber(trackNumber);
       setIsSuccess(true);
     } catch (err: unknown) {
@@ -170,6 +247,12 @@ export function RequestForm({
             <span className="font-semibold text-slate-900 truncate max-w-[240px]">{title}</span>
           </div>
           <div className="flex justify-between">
+            <span className="text-slate-500">Location:</span>
+            <span className="font-semibold text-slate-900 truncate max-w-[240px]">
+              {building} — {floor}, {roomNumber}
+            </span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-slate-500">Suggested Priority:</span>
             <span className="font-bold text-teal-700">{computedSuggestedPriority}</span>
           </div>
@@ -197,7 +280,10 @@ export function RequestForm({
               setIsSuccess(false);
               setTitle("");
               setDescription("");
-              setUploadedPhotos([]);
+              setBuilding("");
+              setRoomNumber("");
+              setSelectedPhoto(null);
+              setPhotoPreview(null);
               setQrScanned(false);
             }}
           >
@@ -234,6 +320,17 @@ export function RequestForm({
           {qrScanned ? "Re-scan Plaque" : "Simulate QR Scan"}
         </Button>
       </div>
+
+      {/* Global Form Error Alert */}
+      {errors.form && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <span className="font-bold">Submission Error:</span>
+            <p className="mt-0.5">{errors.form}</p>
+          </div>
+        </div>
+      )}
 
       {/* Duplicate Request Detection Banner */}
       {potentialDuplicate && (
@@ -278,7 +375,7 @@ export function RequestForm({
               setDepartmentId(e.target.value);
               setCategoryId("");
             }}
-            options={DEMO_DEPARTMENTS.map((d) => ({
+            options={departments.map((d) => ({
               value: d.id,
               label: `${d.name} (${d.code})`,
             }))}
@@ -298,8 +395,8 @@ export function RequestForm({
           />
         </div>
 
-        {/* Building & Room Location */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Building, Floor & Room Location */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input
             label="Campus Building"
             required
@@ -309,10 +406,25 @@ export function RequestForm({
             error={errors.building}
           />
 
-          <Input
-            label="Room / Lab / Location Details"
+          <Select
+            label="Floor"
             required
-            placeholder="e.g. Room 204 / 2nd Floor East"
+            value={floor}
+            onChange={(e) => setFloor(e.target.value)}
+            options={[
+              { value: "Ground Floor", label: "Ground Floor" },
+              { value: "Floor 1", label: "Floor 1" },
+              { value: "Floor 2", label: "Floor 2" },
+              { value: "Floor 3", label: "Floor 3" },
+              { value: "Floor 4", label: "Floor 4" },
+              { value: "Basement", label: "Basement" },
+            ]}
+          />
+
+          <Input
+            label="Room Number / Location Details"
+            required
+            placeholder="e.g. Room 204 / East Wing"
             value={roomNumber}
             onChange={(e) => setRoomNumber(e.target.value)}
             error={errors.roomNumber}
@@ -380,47 +492,55 @@ export function RequestForm({
           )}
         </div>
 
-        {/* Photograph Upload Simulator */}
+        {/* Secure Photograph Upload */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-            Upload Issue Photographs (Optional)
+            Upload Issue Photograph (Optional)
           </label>
-          <div className="p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-center transition-colors">
-            <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-            <div className="text-xs font-semibold text-slate-700">
-              Click to select or drag and drop photographs
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Supports PNG, JPG, or WEBP up to 10MB
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="mt-3 text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
-            />
-          </div>
 
-          {uploadedPhotos.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {uploadedPhotos.map((photo, i) => (
-                <div
-                  key={i}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-50 border border-teal-200 text-xs font-medium text-teal-800"
-                >
-                  <span>{photo}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setUploadedPhotos((prev) => prev.filter((_, idx) => idx !== i))
-                    }
-                    className="text-teal-600 hover:text-teal-900"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+          {!photoPreview ? (
+            <div className="p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-center transition-colors">
+              <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <div className="text-xs font-semibold text-slate-700">
+                Click to select or drag and drop photographs
+              </div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                Supports PNG, JPG, or WEBP up to 5MB
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="mt-3 text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-800 cursor-pointer"
+              />
             </div>
+          ) : (
+            <div className="relative inline-block mt-2">
+              <div className="relative w-40 h-28 rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                <Image
+                  src={photoPreview}
+                  alt="Issue preview"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                className="absolute -top-2 -right-2 p-1.5 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700"
+                title="Remove photo"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <div className="mt-1 text-[11px] text-slate-500 font-medium truncate max-w-[160px]">
+                {selectedPhoto?.name}
+              </div>
+            </div>
+          )}
+
+          {photoError && (
+            <p className="mt-2 text-xs text-rose-600 font-medium">{photoError}</p>
           )}
         </div>
 
@@ -430,6 +550,7 @@ export function RequestForm({
             type="button"
             variant="outline"
             onClick={() => router.back()}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
@@ -437,6 +558,7 @@ export function RequestForm({
             type="submit"
             variant="primary"
             isLoading={isSubmitting}
+            disabled={isSubmitting}
             rightIcon={<ArrowRight className="w-4 h-4" />}
           >
             Submit Service Request

@@ -1,8 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { RequestForm } from "@/components/requests/RequestForm";
+
+function FacultyRequestFormContent() {
+  const searchParams = useSearchParams();
+  const defaultDept = searchParams.get("dept") || undefined;
+
+  return <RequestForm rolePrefix="/faculty" defaultDepartmentId={defaultDept} />;
+}
 
 export default function FacultyNewRequestPage() {
   return (
@@ -17,7 +25,9 @@ export default function FacultyNewRequestPage() {
           </p>
         </div>
 
-        <RequestForm rolePrefix="/faculty" />
+        <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading form...</div>}>
+          <FacultyRequestFormContent />
+        </Suspense>
       </div>
     </DashboardShell>
   );

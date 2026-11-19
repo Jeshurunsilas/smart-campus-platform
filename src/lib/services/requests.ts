@@ -78,6 +78,14 @@ export async function createServiceRequest(input: CreateRequestInput): Promise<{
     comment: "Service request submitted by user.",
   });
 
+  // Notify the user of successful submission
+  await supabase.from("notifications").insert({
+    user_id: user.id,
+    title: "Service Request Submitted",
+    message: `Your request "${input.title}" (${data.request_number}) was submitted successfully.`,
+    related_request_id: data.id,
+  });
+
   return { success: true, data };
 }
 
@@ -263,4 +271,146 @@ export async function submitRequestFeedback(
 
   if (error) throw error;
   return true;
+}
+
+export function isRequestCancellable(status: RequestStatus): boolean {
+  return status === "Submitted" || status === "Under Review";
+}
+
+export async function cancelServiceRequest(
+  requestId: string,
+  reason: string = "Cancelled by requestor"
+): Promise<{ success: boolean; message: string }> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req && !isRequestCancellable(req.status)) {
+      throw new Error(`Requests with status '${req.status}' cannot be cancelled.`);
+    }
+    if (req) {
+      req.status = "Closed";
+    }
+    return { success: true, message: "Request cancelled successfully." };
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("You must be logged in to cancel a request.");
+  }
+
+  const { data: request, error: fetchError } = await supabase
+    .from("service_requests")
+    .select("status, user_id, title")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchError || !request) {
+    throw new Error("Service request not found.");
+  }
+
+  if (request.user_id !== user.id) {
+    throw new Error("Unauthorized: You can only cancel your own service requests.");
+  }
+
+  if (!isRequestCancellable(request.status)) {
+    throw new Error(
+      `Requests with status '${request.status}' cannot be cancelled directly. Please contact department staff.`
+    );
+  }
+
+  const { error: updateError } = await supabase
+    .from("service_requests")
+    .update({
+      status: "Closed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  if (updateError) throw updateError;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: request.status,
+    new_status: "Closed",
+    comment: `Request cancelled by user. Reason: ${reason}`,
+  });
+
+  await supabase.from("notifications").insert({
+    user_id: user.id,
+    title: "Request Cancelled",
+    message: `Your request "${request.title}" has been cancelled.`,
+    related_request_id: requestId,
+  });
+
+  return { success: true, message: "Request cancelled successfully." };
+}
+
+export interface RequestUpdateItem {
+  id: string;
+  request_id: string;
+  updated_by: string;
+  old_status: string | null;
+  new_status: string;
+  comment: string;
+  created_at: string;
+}
+
+export async function getRequestUpdates(requestId: string): Promise<RequestUpdateItem[]> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    const updates: RequestUpdateItem[] = [
+      {
+        id: `upd-1-${requestId}`,
+        request_id: requestId,
+        updated_by: req?.creator?.full_name || "Requestor",
+        old_status: null,
+        new_status: "Submitted",
+        comment: "Service request registered in system.",
+        created_at: req?.created_at || new Date().toISOString(),
+      },
+    ];
+
+    if (req && req.status !== "Submitted") {
+      updates.push({
+        id: `upd-2-${requestId}`,
+        request_id: requestId,
+        updated_by: "Campus Operations",
+        old_status: "Submitted",
+        new_status: req.status === "Closed" ? "Closed" : "In Progress",
+        comment: req.status === "Closed" ? "Request closed by requestor." : `Dispatched to ${req.department?.name || "Maintenance"}.`,
+        created_at: req.updated_at || new Date().toISOString(),
+      });
+    }
+
+    if (req && (req.status === "Resolved" || req.status === "Closed") && req.resolved_at) {
+      updates.push({
+        id: `upd-3-${requestId}`,
+        request_id: requestId,
+        updated_by: "Department Staff",
+        old_status: "In Progress",
+        new_status: req.status,
+        comment: "Work verified and completed.",
+        created_at: req.resolved_at,
+      });
+    }
+
+    return updates;
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("request_updates")
+    .select("*")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data as RequestUpdateItem[];
 }

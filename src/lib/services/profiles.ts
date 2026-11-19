@@ -117,3 +117,57 @@ export async function getAllUserProfiles(): Promise<UserProfile[]> {
 
   return data as unknown as UserProfile[];
 }
+
+export interface UpdateProfileInput {
+  full_name?: string;
+  avatar_url?: string;
+  phone_number?: string;
+}
+
+export async function updateUserProfile(
+  userId: string,
+  input: UpdateProfileInput
+): Promise<{ success: boolean; message: string }> {
+  if (!isSupabaseConfigured()) {
+    const matching = Object.values(DEMO_USERS).find((u) => u.id === userId);
+    if (matching) {
+      if (input.full_name) matching.full_name = input.full_name;
+      if (input.phone_number !== undefined) matching.phone_number = input.phone_number;
+      if (input.avatar_url) matching.avatar_url = input.avatar_url;
+    }
+    return { success: true, message: "Profile updated successfully." };
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || user.id !== userId) {
+    throw new Error("Unauthorized: You can only update your own profile.");
+  }
+
+  const allowedUpdates: {
+    full_name?: string;
+    avatar_url?: string;
+    updated_at: string;
+  } = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.full_name && input.full_name.trim()) {
+    allowedUpdates.full_name = input.full_name.trim();
+  }
+  if (input.avatar_url) {
+    allowedUpdates.avatar_url = input.avatar_url;
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(allowedUpdates)
+    .eq("id", userId);
+
+  if (error) throw error;
+
+  return { success: true, message: "Profile updated successfully." };
+}

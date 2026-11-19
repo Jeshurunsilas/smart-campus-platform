@@ -60,6 +60,24 @@ export async function markNotificationAsRead(notificationId: string): Promise<bo
   return !error;
 }
 
+export async function markAllNotificationsAsRead(userId?: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return true;
+  }
+
+  const supabase = createClient();
+  const targetId = userId || (await supabase.auth.getUser()).data.user?.id;
+  if (!targetId) return false;
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ is_read: true })
+    .eq("user_id", targetId)
+    .eq("is_read", false);
+
+  return !error;
+}
+
 export function subscribeToNotifications(userId: string, onNewNotification: (notif: InAppNotification) => void) {
   if (!isSupabaseConfigured()) {
     return { unsubscribe: () => {} };

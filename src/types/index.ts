@@ -89,6 +89,7 @@ export interface ServiceRequest {
   priority_overridden_by?: string | null;
   priority_override_reason?: string | null;
   status: RequestStatus;
+  image_url?: string | null;
   attachments?: string[];
   completion_photos?: string[];
   sla_deadline?: string | null;
