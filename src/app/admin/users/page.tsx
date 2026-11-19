@@ -51,6 +51,15 @@ export default function AdminUsersPage() {
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [isSubmittingProvision, setIsSubmittingProvision] = useState(false);
 
+  // New Admin Form State
+  const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
+  const [adminFullName, setAdminFullName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminTempPassword, setAdminTempPassword] = useState("");
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSuccessMsg, setAdminSuccessMsg] = useState<string | null>(null);
+  const [isSubmittingAdmin, setIsSubmittingAdmin] = useState(false);
+
   const fetchUsers = useCallback(() => {
     Promise.all([
       getRegisteredUsers(searchTerm, roleFilter, statusFilter),
@@ -133,6 +142,52 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminFullName.trim() || !adminEmail.trim()) {
+      setAdminError("Please provide legal full name and university email address.");
+      return;
+    }
+
+    setIsSubmittingAdmin(true);
+    setAdminError(null);
+    setAdminSuccessMsg(null);
+
+    try {
+      const res = await fetch("/api/admin/users/create-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: adminFullName.trim(),
+          email: adminEmail.trim().toLowerCase(),
+          temporaryPassword: adminTempPassword || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to create administrator.");
+      }
+
+      setAdminSuccessMsg(
+        `Administrator account created! Temporary password: ${data.temporaryPassword || "Supplied password"}. In-app notification delivered.`
+      );
+      setAdminFullName("");
+      setAdminEmail("");
+      setAdminTempPassword("");
+      fetchUsers();
+    } catch (err: unknown) {
+      setAdminError(err instanceof Error ? err.message : "Failed to create administrator account.");
+    } finally {
+      setIsSubmittingAdmin(false);
+    }
+  };
+
+  const generateRandomPassword = () => {
+    const pw = `CampusAdmin#${Math.floor(100000 + Math.random() * 900000)}!`;
+    setAdminTempPassword(pw);
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case "student":
@@ -159,19 +214,34 @@ export default function AdminUsersPage() {
           </p>
         </div>
 
-        <Button
-          variant="teal"
-          size="md"
-          onClick={() => {
-            if (departments.length > 0 && !newStaffDeptId) {
-              setNewStaffDeptId(departments[0].id);
-            }
-            setIsProvisionModalOpen(true);
-          }}
-          leftIcon={<UserPlus className="w-4 h-4" />}
-        >
-          Provision Staff Account
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => {
+              setAdminError(null);
+              setAdminSuccessMsg(null);
+              setIsCreateAdminModalOpen(true);
+            }}
+            leftIcon={<Shield className="w-4 h-4 text-purple-600" />}
+          >
+            Create Admin Account
+          </Button>
+
+          <Button
+            variant="teal"
+            size="md"
+            onClick={() => {
+              if (departments.length > 0 && !newStaffDeptId) {
+                setNewStaffDeptId(departments[0].id);
+              }
+              setIsProvisionModalOpen(true);
+            }}
+            leftIcon={<UserPlus className="w-4 h-4" />}
+          >
+            Provision Staff Account
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filter Bar */}
@@ -387,6 +457,95 @@ export default function AdminUsersPage() {
             </Button>
             <Button type="submit" variant="primary" isLoading={isSubmittingProvision}>
               Provision &amp; Approve
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Create Administrator Account Modal */}
+      <Modal
+        isOpen={isCreateAdminModalOpen}
+        onClose={() => setIsCreateAdminModalOpen(false)}
+        title="Create Campus Administrator Account"
+        description="Provision an executive administrator account with full platform management privileges."
+      >
+        <form onSubmit={handleCreateAdmin} className="space-y-4">
+          {adminSuccessMsg && (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{adminSuccessMsg}</span>
+            </div>
+          )}
+
+          {adminError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{adminError}</span>
+            </div>
+          )}
+
+          <Input
+            label="Full Legal Name"
+            required
+            placeholder="e.g. Dr. Arthur Vance"
+            value={adminFullName}
+            onChange={(e) => setAdminFullName(e.target.value)}
+          />
+
+          <Input
+            label="Official Institutional Email"
+            type="email"
+            required
+            placeholder="e.g. a.vance@campus.edu"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+          />
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-700">
+                Temporary Password / Invitation
+              </label>
+              <button
+                type="button"
+                onClick={generateRandomPassword}
+                className="text-[11px] font-bold text-teal-700 hover:underline cursor-pointer"
+              >
+                Auto-Generate Password
+              </button>
+            </div>
+            <Input
+              type="text"
+              placeholder="Leave blank to auto-generate secure temporary password"
+              value={adminTempPassword}
+              onChange={(e) => setAdminTempPassword(e.target.value)}
+              helperText="The user will be prompted to change their password upon first login."
+            />
+          </div>
+
+          <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200 text-xs text-purple-900 flex items-start gap-2">
+            <Shield className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>Security Audit:</strong> Your current administrator ID will be recorded as the approver of this account.
+            </span>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCreateAdminModalOpen(false)}
+              disabled={isSubmittingAdmin}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="bg-purple-900 hover:bg-purple-800 text-white"
+              isLoading={isSubmittingAdmin}
+            >
+              Create Administrator
             </Button>
           </div>
         </form>

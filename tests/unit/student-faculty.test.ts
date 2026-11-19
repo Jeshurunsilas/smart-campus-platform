@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import {
   isRequestCancellable,
   cancelServiceRequest,
@@ -111,6 +111,10 @@ describe("Phase 4: Student & Faculty Module Core Logic", () => {
 
       // Verify that user role remains student
       expect(DEMO_USERS.student.role).toBe("student");
+    });
+
+    afterAll(() => {
+      DEMO_USERS.student.full_name = "Rahul Kumar";
     });
   });
 

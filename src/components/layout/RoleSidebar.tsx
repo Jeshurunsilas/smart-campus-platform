@@ -24,6 +24,7 @@ import {
   Shield,
   GraduationCap,
   Briefcase,
+  Database,
 } from "lucide-react";
 
 interface RoleSidebarProps {
@@ -74,6 +75,7 @@ export function RoleSidebar({
       { title: "Categories", href: "/admin/categories", icon: FolderTree },
       { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
       { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
+      { title: "Demo Data", href: "/admin/demo-data", icon: Database },
       { title: "Settings", href: "/admin/settings", icon: Settings },
     ],
     staff: [

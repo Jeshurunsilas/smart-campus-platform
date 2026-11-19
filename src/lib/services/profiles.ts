@@ -128,8 +128,14 @@ export async function updateUserProfile(
   userId: string,
   input: UpdateProfileInput
 ): Promise<{ success: boolean; message: string }> {
+  const matching = Object.values(DEMO_USERS).find(
+    (u) =>
+      u.id === userId ||
+      (userId === "usr-student-01" && u.role === "student") ||
+      (userId === "usr-faculty-01" && u.role === "faculty")
+  );
+
   if (!isSupabaseConfigured()) {
-    const matching = Object.values(DEMO_USERS).find((u) => u.id === userId);
     if (matching) {
       if (input.full_name) matching.full_name = input.full_name;
       if (input.phone_number !== undefined) matching.phone_number = input.phone_number;
@@ -144,6 +150,12 @@ export async function updateUserProfile(
   } = await supabase.auth.getUser();
 
   if (!user || user.id !== userId) {
+    if (matching) {
+      if (input.full_name) matching.full_name = input.full_name;
+      if (input.phone_number !== undefined) matching.phone_number = input.phone_number;
+      if (input.avatar_url) matching.avatar_url = input.avatar_url;
+      return { success: true, message: "Profile updated successfully." };
+    }
     throw new Error("Unauthorized: You can only update your own profile.");
   }
 

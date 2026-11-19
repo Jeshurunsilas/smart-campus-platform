@@ -20,12 +20,57 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+const DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "DemoCampus2026!";
+
+const DEMO_PROFILES = [
+  {
+    role: "student",
+    name: "Rahul Kumar",
+    email: "student@smartcampus.demo",
+    label: "Student",
+    icon: GraduationCap,
+    iconColor: "text-blue-600",
+    bgColor: "hover:bg-blue-50 border-blue-200",
+    desc: "Create and track campus service tickets",
+  },
+  {
+    role: "faculty",
+    name: "Priya Sharma",
+    email: "faculty@smartcampus.demo",
+    label: "Faculty",
+    icon: Briefcase,
+    iconColor: "text-emerald-600",
+    bgColor: "hover:bg-emerald-50 border-emerald-200",
+    desc: "Submit priority academic & facility requests",
+  },
+  {
+    role: "staff",
+    name: "Arjun Kumar",
+    email: "staff@smartcampus.demo",
+    label: "Department Staff",
+    icon: Wrench,
+    iconColor: "text-amber-600",
+    bgColor: "hover:bg-amber-50 border-amber-200",
+    desc: "Manage tickets, update status & SLA",
+  },
+  {
+    role: "admin",
+    name: "Campus Administrator",
+    email: "admin@smartcampus.demo",
+    label: "Administrator",
+    icon: Shield,
+    iconColor: "text-purple-600",
+    bgColor: "hover:bg-purple-50 border-purple-200",
+    desc: "Platform governance, analytics & seeding",
+  },
+];
+
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState("alex.morgan@campus.edu");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("student@smartcampus.demo");
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,9 +97,9 @@ function LoginFormContent() {
       if (result.isDemo) {
         if (result.demoRole === "faculty") {
           router.push("/faculty/dashboard");
-        } else if (result.demoRole === "staff") {
+        } else if (result.demoRole === "staff" || result.demoRole === "department_staff") {
           router.push("/department/dashboard");
-        } else if (result.demoRole === "administrator") {
+        } else if (result.demoRole === "administrator" || result.demoRole === "admin") {
           router.push("/admin/dashboard");
         } else {
           router.push("/student/dashboard");
@@ -81,20 +126,10 @@ function LoginFormContent() {
     }
   };
 
-  const selectDemoRole = (role: "student" | "faculty" | "staff" | "admin") => {
-    if (role === "student") {
-      setEmail("alex.morgan@campus.edu");
-      setPassword("password123");
-    } else if (role === "faculty") {
-      setEmail("elena.vance@campus.edu");
-      setPassword("password123");
-    } else if (role === "staff") {
-      setEmail("marcus.brody@campus.edu");
-      setPassword("password123");
-    } else {
-      setEmail("sarah.jenkins@campus.edu");
-      setPassword("password123");
-    }
+  const selectDemoRole = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword(DEMO_PASSWORD);
+    setError("");
   };
 
   return (
@@ -113,51 +148,68 @@ function LoginFormContent() {
           Service Management Portal
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Sign in to access your role-specific dashboard and service tickets.
+          Sign in to access your role-specific dashboard and campus service tickets.
         </p>
       </div>
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
-        {/* Quick Demo Role Picker Banner */}
-        <div className="mb-4 p-4 rounded-2xl bg-teal-50 border border-teal-200/90 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-teal-900 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-            Phase 3 Authentication Quick-Fill:
+      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-lg px-4 sm:px-0">
+        {/* Dedicated Demo Accounts Section */}
+        <div className="mb-4 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+              <span>Demo Accounts (Instant One-Click Pre-fill)</span>
+            </div>
+            <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-semibold border border-teal-200">
+              4 Roles Ready
+            </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5 text-[11px]">
-            <button
-              type="button"
-              onClick={() => selectDemoRole("student")}
-              className="py-1.5 px-2 rounded-lg bg-white border border-teal-200 text-slate-700 hover:bg-teal-100 font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <GraduationCap className="w-3 h-3 text-blue-600" />
-              Student
-            </button>
-            <button
-              type="button"
-              onClick={() => selectDemoRole("faculty")}
-              className="py-1.5 px-2 rounded-lg bg-white border border-teal-200 text-slate-700 hover:bg-teal-100 font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Briefcase className="w-3 h-3 text-emerald-600" />
-              Faculty
-            </button>
-            <button
-              type="button"
-              onClick={() => selectDemoRole("staff")}
-              className="py-1.5 px-2 rounded-lg bg-white border border-teal-200 text-slate-700 hover:bg-teal-100 font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Wrench className="w-3 h-3 text-amber-600" />
-              Staff
-            </button>
-            <button
-              type="button"
-              onClick={() => selectDemoRole("admin")}
-              className="py-1.5 px-2 rounded-lg bg-white border border-teal-200 text-slate-700 hover:bg-teal-100 font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Shield className="w-3 h-3 text-purple-600" />
-              Admin
-            </button>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+            {DEMO_PROFILES.map((p) => {
+              const Icon = p.icon;
+              const isSelected = email === p.email;
+              return (
+                <button
+                  key={p.email}
+                  type="button"
+                  onClick={() => selectDemoRole(p.email)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                    isSelected
+                      ? "bg-teal-50/70 border-teal-500 ring-1 ring-teal-500 shadow-2xs"
+                      : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/80"
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-lg bg-white border border-slate-200 shrink-0 ${p.iconColor}`}>
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-bold text-slate-900 truncate">{p.name}</span>
+                      <span className="text-[9px] uppercase tracking-wider font-semibold text-slate-500">
+                        {p.label}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{p.email}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
+        </div>
+
+        {/* Initial Administrator Setup Alert Callout */}
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200/90 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-amber-900">
+            <Shield className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="font-medium">Initial campus deployment? Setup your root administrator:</span>
+          </div>
+          <Link
+            href="/setup-admin"
+            className="text-amber-800 font-bold hover:text-amber-900 underline ml-2 shrink-0"
+          >
+            Setup Admin &rarr;
+          </Link>
         </div>
 
         {/* Login Card */}
