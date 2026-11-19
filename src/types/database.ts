@@ -151,6 +151,10 @@ export interface Database {
           image_url: string | null;
           assigned_staff_id: string | null;
           due_at: string | null;
+          sla_deadline?: string | null;
+          is_overdue?: boolean;
+          suggested_priority?: string | null;
+          priority_override_reason?: string | null;
           resolved_at: string | null;
           created_at: string;
           updated_at: string;
@@ -179,6 +183,10 @@ export interface Database {
           image_url?: string | null;
           assigned_staff_id?: string | null;
           due_at?: string | null;
+          sla_deadline?: string | null;
+          is_overdue?: boolean;
+          suggested_priority?: string | null;
+          priority_override_reason?: string | null;
           resolved_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -207,6 +215,10 @@ export interface Database {
           image_url?: string | null;
           assigned_staff_id?: string | null;
           due_at?: string | null;
+          sla_deadline?: string | null;
+          is_overdue?: boolean;
+          suggested_priority?: string | null;
+          priority_override_reason?: string | null;
           resolved_at?: string | null;
           created_at?: string;
           updated_at?: string;

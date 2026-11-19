@@ -414,3 +414,258 @@ export async function getRequestUpdates(requestId: string): Promise<RequestUpdat
 
   return data as RequestUpdateItem[];
 }
+
+export async function getAllRequestsAdmin(): Promise<ServiceRequest[]> {
+  if (!isSupabaseConfigured()) {
+    return DEMO_REQUESTS;
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("service_requests")
+    .select(`
+      *,
+      department:departments(*),
+      category:service_categories(*),
+      location:locations(*),
+      creator:profiles!service_requests_user_id_fkey(*)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) {
+    return DEMO_REQUESTS;
+  }
+
+  return (data as unknown as ServiceRequest[]) || [];
+}
+
+export async function updateRequestPriority(
+  requestId: string,
+  newPriority: RequestPriority,
+  reason?: string
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req) req.priority = newPriority;
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      priority: newPriority,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: null,
+    new_status: "Priority Adjusted",
+    comment: `Priority changed to ${newPriority}. Reason: ${reason || "Administrative review."}`,
+  });
+
+  return true;
+}
+
+export async function acceptRequestAssignment(requestId: string, notes?: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req) req.status = "Accepted";
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      status: "Accepted",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: "Assigned",
+    new_status: "Accepted",
+    comment: notes || "Technician acknowledged and accepted task.",
+  });
+
+  return true;
+}
+
+export async function startRequestWork(requestId: string, notes?: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req) req.status = "In Progress";
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      status: "In Progress",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: "Accepted",
+    new_status: "In Progress",
+    comment: notes || "Work begun on-site by service personnel.",
+  });
+
+  return true;
+}
+
+export async function rejectRequestAssignment(requestId: string, reason: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req) {
+      req.status = "Under Review";
+      req.assigned_staff_id = null;
+    }
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      status: "Under Review",
+      assigned_staff_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: "Assigned",
+    new_status: "Under Review",
+    comment: `Assignment declined by technician. Reason: ${reason}`,
+  });
+
+  return true;
+}
+
+export async function addRequestWorkNote(requestId: string, note: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const { error } = await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: null,
+    new_status: "Work Note",
+    comment: note,
+  });
+
+  return !error;
+}
+
+export async function resolveServiceRequest(
+  requestId: string,
+  resolutionDetails: string,
+  completionPhotoUrl?: string
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    const req = DEMO_REQUESTS.find((r) => r.id === requestId);
+    if (req) {
+      req.status = "Resolved";
+      req.resolved_at = new Date().toISOString();
+    }
+    return true;
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Authentication required.");
+
+  const now = new Date().toISOString();
+  const { data: request, error: fetchErr } = await supabase
+    .from("service_requests")
+    .select("user_id, title")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchErr || !request) throw new Error("Service request not found.");
+
+  const { error } = await supabase
+    .from("service_requests")
+    .update({
+      status: "Resolved",
+      resolved_at: now,
+      updated_at: now,
+    })
+    .eq("id", requestId);
+
+  if (error) throw error;
+
+  await supabase.from("request_updates").insert({
+    request_id: requestId,
+    updated_by: user.id,
+    old_status: "In Progress",
+    new_status: "Resolved",
+    comment: `Service completed: ${resolutionDetails}${completionPhotoUrl ? " [Completion Photo Attached]" : ""}`,
+  });
+
+  // Notify the original creator
+  await supabase.from("notifications").insert({
+    user_id: request.user_id,
+    title: "Service Request Resolved",
+    message: `Your request "${request.title}" has been completed. Please rate your service satisfaction.`,
+    related_request_id: requestId,
+  });
+
+  return true;
+}

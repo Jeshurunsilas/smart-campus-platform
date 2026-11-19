@@ -58,7 +58,7 @@ export interface ServiceCategory {
   estimated_sla_hours: number;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   department?: Department;
 }
 
@@ -90,6 +90,8 @@ export interface ServiceRequest {
   priority_override_reason?: string | null;
   status: RequestStatus;
   image_url?: string | null;
+  due_at?: string | null;
+  assigned_staff_id?: string | null;
   attachments?: string[];
   completion_photos?: string[];
   sla_deadline?: string | null;

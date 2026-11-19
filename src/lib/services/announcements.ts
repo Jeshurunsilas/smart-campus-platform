@@ -86,3 +86,14 @@ export async function createCampusAnnouncement(
   if (error) throw error;
   return true;
 }
+
+export async function deleteCampusAnnouncement(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) {
+    return true;
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.from("announcements").delete().eq("id", id);
+  if (error) throw error;
+  return true;
+}

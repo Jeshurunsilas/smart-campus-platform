@@ -171,3 +171,154 @@ export async function updateUserProfile(
 
   return { success: true, message: "Profile updated successfully." };
 }
+
+export async function getRegisteredUsers(
+  searchTerm: string = "",
+  roleFilter: string = "all",
+  statusFilter: string = "all"
+): Promise<UserProfile[]> {
+  if (!isSupabaseConfigured()) {
+    return Object.values(DEMO_USERS).filter((u) => {
+      const matchSearch =
+        u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchRole = roleFilter === "all" || u.role === roleFilter;
+      const matchStatus = statusFilter === "all" || u.approval_status === statusFilter;
+      return matchSearch && matchRole && matchStatus;
+    });
+  }
+
+  const supabase = createClient();
+  let query = supabase.from("profiles").select("*").order("created_at", { ascending: false });
+
+  if (roleFilter !== "all") {
+    query = query.eq("role", roleFilter as "student" | "faculty" | "administrator" | "department_staff");
+  }
+  if (statusFilter !== "all") {
+    query = query.eq("approval_status", statusFilter as "pending" | "approved" | "rejected");
+  }
+
+  const { data, error } = await query;
+  if (error || !data) {
+    return Object.values(DEMO_USERS);
+  }
+
+  let results = data as unknown as UserProfile[];
+  if (searchTerm.trim()) {
+    const term = searchTerm.toLowerCase();
+    results = results.filter(
+      (u) =>
+        u.full_name.toLowerCase().includes(term) ||
+        u.email.toLowerCase().includes(term)
+    );
+  }
+
+  return results;
+}
+
+export async function toggleUserStatus(
+  userId: string,
+  newStatusOrActive: "approved" | "rejected" | "pending" | boolean
+): Promise<{ success: boolean; status: string }> {
+  let status: "approved" | "rejected" | "pending";
+  if (typeof newStatusOrActive === "boolean") {
+    status = newStatusOrActive ? "approved" : "rejected";
+  } else {
+    status = newStatusOrActive;
+  }
+
+  if (!isSupabaseConfigured()) {
+    const user = Object.values(DEMO_USERS).find((u) => u.id === userId);
+    if (user) user.approval_status = status;
+    return { success: true, status };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      approval_status: status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (error) throw error;
+
+  await supabase.from("notifications").insert({
+    user_id: userId,
+    title: `Account Status Changed: ${status.toUpperCase()}`,
+    message: `Your campus platform account status has been updated to ${status} by an administrator.`,
+  });
+
+  return { success: true, status };
+}
+
+export interface ProvisionStaffInput {
+  full_name?: string;
+  fullName?: string;
+  email: string;
+  department_id?: string;
+  departmentId?: string;
+  role?: "administrator" | "department_staff";
+  staffId?: string;
+  phoneNumber?: string;
+}
+
+export async function provisionStaffAccount(input: ProvisionStaffInput): Promise<{
+  success: boolean;
+  id?: string;
+  staffProfile?: {
+    id: string;
+    full_name: string;
+    email: string;
+    role: string;
+    department_id: string;
+    approval_status: string;
+  };
+}> {
+  const resolvedName = input.fullName || input.full_name || "New Staff Member";
+  const resolvedDept = input.departmentId || input.department_id || "dept-facilities";
+  const resolvedRole = input.role || "department_staff";
+  const newId = `staff-${Date.now()}`;
+
+  const staffProfile = {
+    id: newId,
+    full_name: resolvedName,
+    email: input.email,
+    role: resolvedRole,
+    department_id: resolvedDept,
+    approval_status: "approved",
+  };
+
+  if (!isSupabaseConfigured()) {
+    return {
+      success: true,
+      id: newId,
+      staffProfile,
+    };
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .insert({
+      id: crypto.randomUUID(),
+      full_name: resolvedName,
+      email: input.email,
+      role: resolvedRole,
+      department_id: resolvedDept,
+      approval_status: "approved",
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return {
+    success: true,
+    id: data.id,
+    staffProfile: {
+      ...staffProfile,
+      id: data.id,
+    },
+  };
+}

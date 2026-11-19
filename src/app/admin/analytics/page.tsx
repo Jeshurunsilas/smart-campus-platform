@@ -1,27 +1,80 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { TrendsBarChart } from "@/components/dashboard/TrendsBarChart";
 import { DepartmentPerformanceChart } from "@/components/dashboard/DepartmentPerformanceChart";
-import { DEMO_DEPARTMENT_SCORECARDS } from "@/lib/demo-data";
-import { Star, Clock, CheckCircle2 } from "lucide-react";
+import { CampusHeatmap } from "@/components/dashboard/CampusHeatmap";
+import { DepartmentScorecard } from "@/components/dashboard/DepartmentScorecard";
+import { FeedbackAnalysis } from "@/components/dashboard/FeedbackAnalysis";
+import { Star, Clock, CheckCircle2, Map, BarChart3, Award, MessageSquare } from "lucide-react";
 
 export default function AdminAnalyticsPage() {
-  const scorecards = DEMO_DEPARTMENT_SCORECARDS;
+  const [activeTab, setActiveTab] = useState<"overview" | "heatmap" | "departments" | "feedback">("overview");
 
   return (
     <DashboardShell role="administrator">
-      <div className="pb-2">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-          Campus Service Analytics &amp; Intelligence
-        </h1>
-        <p className="mt-1 text-xs text-slate-500">
-          Executive performance telemetry, resolution velocity metrics, and user satisfaction scorecards.
-        </p>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            Campus Service Analytics &amp; Intelligence
+          </h1>
+          <p className="mt-1 text-xs text-slate-500">
+            Executive performance telemetry, incident heatmaps, resolution velocity, and CSAT feedback.
+          </p>
+        </div>
+
+        {/* Tab Navigation Controls */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === "overview"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            Trends &amp; Metrics
+          </button>
+          <button
+            onClick={() => setActiveTab("heatmap")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === "heatmap"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <Map className="w-3.5 h-3.5" />
+            Campus Heatmap
+          </button>
+          <button
+            onClick={() => setActiveTab("departments")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === "departments"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            Scorecards
+          </button>
+          <button
+            onClick={() => setActiveTab("feedback")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+              activeTab === "feedback"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            CSAT &amp; Feedback
+          </button>
+        </div>
       </div>
 
-      {/* Top 3 Metric Callouts */}
+      {/* Top 3 Executive Metric Callouts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
@@ -29,7 +82,7 @@ export default function AdminAnalyticsPage() {
               Campus Satisfaction Index
             </span>
             <div className="text-3xl font-extrabold text-slate-900 mt-1 flex items-center gap-1.5">
-              4.68
+              4.72
               <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
             </div>
             <span className="text-xs text-emerald-600 font-semibold mt-1 block">
@@ -44,7 +97,7 @@ export default function AdminAnalyticsPage() {
         <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Mean Resolution Time
+              Mean Resolution Velocity
             </span>
             <div className="text-3xl font-extrabold text-teal-800 mt-1">
               4.2 <span className="text-base font-medium text-slate-500">hours</span>
@@ -76,78 +129,54 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
-      {/* Visual Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-1">
-            Service Request Intake vs Resolution
-          </h3>
-          <p className="text-xs text-slate-500 mb-4">6-Month longitudinal trend</p>
-          <TrendsBarChart />
-        </div>
+      {/* Tab 1: Overview & Charts */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
+              <h3 className="text-sm font-bold text-slate-900 mb-1">
+                Service Request Intake vs Resolution
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">6-Month longitudinal trend</p>
+              <TrendsBarChart />
+            </div>
 
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
-          <h3 className="text-sm font-bold text-slate-900 mb-1">
-            Department SLA Resolution Rates
-          </h3>
-          <p className="text-xs text-slate-500 mb-4">Percentage completed within deadline</p>
-          <DepartmentPerformanceChart />
-        </div>
-      </div>
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
+              <h3 className="text-sm font-bold text-slate-900 mb-1">
+                Department SLA Resolution Rates
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">Percentage completed within deadline</p>
+              <DepartmentPerformanceChart />
+            </div>
+          </div>
 
-      {/* Department Scorecard Table */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
-        <h3 className="text-sm font-bold text-slate-900 mb-1">
-          Department Performance Scorecard
-        </h3>
-        <p className="text-xs text-slate-500 mb-4">
-          Detailed metrics showing workload, completion percentage, and user satisfaction ratings.
-        </p>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 font-semibold uppercase text-[11px]">
-                <th className="py-3 px-4">Department</th>
-                <th className="py-3 px-4">Total Requests</th>
-                <th className="py-3 px-4">Active Orders</th>
-                <th className="py-3 px-4">Resolved</th>
-                <th className="py-3 px-4">Avg Resolution</th>
-                <th className="py-3 px-4">SLA Compliance</th>
-                <th className="py-3 px-4 text-right">Rating</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {scorecards.map((sc) => (
-                <tr key={sc.department_id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">
-                    {sc.department_name}
-                  </td>
-                  <td className="py-3.5 px-4">{sc.total_requests}</td>
-                  <td className="py-3.5 px-4 text-amber-600 font-semibold">
-                    {sc.in_progress_requests + sc.open_requests}
-                  </td>
-                  <td className="py-3.5 px-4 text-emerald-600 font-semibold">
-                    {sc.resolved_requests}
-                  </td>
-                  <td className="py-3.5 px-4 font-mono">{sc.avg_resolution_hours} hrs</td>
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-teal-700">
-                      {sc.completion_rate_percentage}%
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <span className="inline-flex items-center gap-1 font-bold text-slate-900">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      {sc.avg_satisfaction_rating}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DepartmentScorecard />
         </div>
-      </div>
+      )}
+
+      {/* Tab 2: Campus Incident Heatmap */}
+      {activeTab === "heatmap" && (
+        <CampusHeatmap />
+      )}
+
+      {/* Tab 3: Department Scorecards */}
+      {activeTab === "departments" && (
+        <div className="space-y-6">
+          <DepartmentScorecard />
+          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs">
+            <h3 className="text-sm font-bold text-slate-900 mb-1">
+              Resolution Velocity by Department
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">Comparative compliance trends</p>
+            <DepartmentPerformanceChart />
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Recipient CSAT & Feedback */}
+      {activeTab === "feedback" && (
+        <FeedbackAnalysis />
+      )}
     </DashboardShell>
   );
 }

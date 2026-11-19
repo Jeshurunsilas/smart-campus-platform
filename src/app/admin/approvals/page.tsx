@@ -6,7 +6,11 @@ import { DEMO_PENDING_APPROVALS } from "@/lib/demo-data";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
-import { approveUserAccount, rejectUserAccount } from "@/lib/services/profiles";
+import {
+  approveUserAccount,
+  rejectUserAccount,
+  getPendingAccountApprovals,
+} from "@/lib/services/profiles";
 import {
   CheckCircle2,
   FileCheck,
@@ -19,8 +23,8 @@ interface PendingApprovalItem {
   full_name: string;
   email: string;
   role: "student" | "faculty";
-  student_id?: string;
-  faculty_id?: string;
+  student_id?: string | null;
+  faculty_id?: string | null;
   department_name: string;
   submitted_at: string;
   verification_documents: string;
@@ -32,6 +36,23 @@ export default function AdminApprovalsPage() {
 
   const [selectedUser, setSelectedUser] = useState<PendingApprovalItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  React.useEffect(() => {
+    let isMounted = true;
+    getPendingAccountApprovals()
+      .then((data) => {
+        if (isMounted && data) {
+          setApprovals(data);
+        }
+      })
+      .catch(() => {
+        // Fallback
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleApprove = async (id: string, name: string) => {
     try {

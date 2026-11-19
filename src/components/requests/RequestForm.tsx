@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/Select";
 import { createServiceRequest } from "@/lib/services/requests";
 import { getDepartments, getServiceCategories, getCampusLocations } from "@/lib/services/departments";
 import { validateImageFile, uploadServiceRequestImage } from "@/lib/services/storage";
+import { calculateSmartPriority } from "@/lib/services/priority-engine";
 import {
   QrCode,
   Sparkles,
@@ -96,14 +97,14 @@ export function RequestForm({
   );
 
   // Smart Priority Engine calculation
-  const computedSuggestedPriority: RequestPriority =
-    severity === "Critical"
-      ? "Critical"
-      : severity === "High"
-      ? "High"
-      : severity === "Medium"
-      ? "Medium"
-      : "Low";
+  const selectedCategory = categories.find((c) => c.id === categoryId);
+  const smartPriorityAssessment = calculateSmartPriority({
+    severity,
+    categoryDefaultPriority: selectedCategory?.default_priority,
+    building,
+    roomNumber,
+  });
+  const computedSuggestedPriority: RequestPriority = smartPriorityAssessment.recommendedPriority;
 
   // Duplicate ticket detection simulation
   const potentialDuplicate = DEMO_REQUESTS.find(
@@ -468,7 +469,7 @@ export function RequestForm({
             <p className="mt-1 text-slate-600 text-[11px] leading-relaxed">
               System recommended priority:{" "}
               <span className="font-bold text-teal-800">{computedSuggestedPriority}</span>{" "}
-              (Administrators can adjust upon review).
+              ({smartPriorityAssessment.factors[0] || "Calculated based on severity and campus facility zone"}).
             </p>
           </div>
         </div>
