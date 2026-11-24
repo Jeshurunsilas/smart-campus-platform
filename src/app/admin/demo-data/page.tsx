@@ -438,6 +438,101 @@ export default function AdminDemoDataPage() {
           </div>
         </div>
 
+        {/* Smart Operations & Academic Management Intelligence Datasets */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Smart Campus Operations */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                Smart Operations & Digital Twin Entities
+              </h2>
+              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                Shared Spatial Records
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Campus Buildings</span>
+                <div className="text-lg font-black text-slate-900 mt-1">6 Buildings</div>
+                <p className="text-[10px] text-slate-500">2D & 3D Twin Bound</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Registered Assets</span>
+                <div className="text-lg font-black text-slate-900 mt-1">10 Assets</div>
+                <p className="text-[10px] text-slate-500">Health Scores & QR</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">IoT Sensors</span>
+                <div className="text-lg font-black text-slate-900 mt-1">12 Devices</div>
+                <p className="text-[10px] text-slate-500">Live Waveform Feeds</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Incidents / Drills</span>
+                <div className="text-lg font-black text-slate-900 mt-1">3 Active</div>
+                <p className="text-[10px] text-slate-500">Dynamic Evacuation</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Predictive Logs</span>
+                <div className="text-lg font-black text-slate-900 mt-1">4 Anomaly Flags</div>
+                <p className="text-[10px] text-slate-500">Explainable AI Scores</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Command Centre</span>
+                <div className="text-lg font-black text-slate-900 mt-1">SLA 94.2%</div>
+                <p className="text-[10px] text-slate-500">Campus Oversight</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Academic Management & Curriculum */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-emerald-600" />
+                Academic Management & LMS Records
+              </h2>
+              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                LMS Ready
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Degree Programmes</span>
+                <div className="text-lg font-black text-slate-900 mt-1">5 Degrees</div>
+                <p className="text-[10px] text-slate-500">B.Tech, M.Tech, MBA</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Course Syllabi</span>
+                <div className="text-lg font-black text-slate-900 mt-1">5 Courses</div>
+                <p className="text-[10px] text-slate-500">Prerequisites & Credits</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Course Sections</span>
+                <div className="text-lg font-black text-slate-900 mt-1">5 Sections</div>
+                <p className="text-[10px] text-slate-500">Assigned Faculty & Rooms</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Student Enrolments</span>
+                <div className="text-lg font-black text-slate-900 mt-1">6 Records</div>
+                <p className="text-[10px] text-slate-500">Approvals & Waitlists</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Examinations</span>
+                <div className="text-lg font-black text-slate-900 mt-1">2 Tests</div>
+                <p className="text-[10px] text-slate-500">Auto-Scored MCQs</p>
+              </div>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Capstone Projects</span>
+                <div className="text-lg font-black text-slate-900 mt-1">2 Projects</div>
+                <p className="text-[10px] text-slate-500">100-pt Rubric Scoring</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Quick Links Footer */}
         <div className="bg-slate-900 text-white p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">

@@ -1,19 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserRole } from "@/types";
+import { UserRole, UserProfile } from "@/types";
 import { RoleSidebar } from "./RoleSidebar";
 import { TopNavbar } from "./TopNavbar";
+import { AICopilotDrawer } from "@/components/campus/AICopilotDrawer";
 import { DEMO_USERS } from "@/lib/demo-data";
 
 interface DashboardShellProps {
   role: UserRole;
   children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  user?: UserProfile;
 }
 
-export function DashboardShell({ role, children }: DashboardShellProps) {
+export function DashboardShell({ role, children, user }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const currentUser = DEMO_USERS[role] || DEMO_USERS.student;
+  const currentUser = user || DEMO_USERS[role] || DEMO_USERS.student;
 
   return (
     <div className="flex h-screen bg-[#F5F7FA] overflow-hidden text-slate-900">
@@ -56,6 +60,13 @@ export function DashboardShell({ role, children }: DashboardShellProps) {
           <div className="max-w-7xl mx-auto space-y-6">{children}</div>
         </main>
       </div>
+
+      {/* Persistent AI Operations Copilot Drawer */}
+      <AICopilotDrawer
+        role={role}
+        userName={currentUser.full_name}
+        userEmail={currentUser.email}
+      />
     </div>
   );
 }

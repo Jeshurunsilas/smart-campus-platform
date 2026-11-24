@@ -8,7 +8,7 @@ export interface StatsCardProps {
   subtitle?: string;
   icon: LucideIcon;
   trend?: {
-    value: number;
+    value: number | string;
     isPositive: boolean;
     label?: string;
   };
@@ -70,8 +70,9 @@ export function StatsCard({
                   trend.isPositive ? "text-emerald-600" : "text-rose-600"
                 )}
               >
-                {trend.isPositive ? "+" : "-"}
-                {Math.abs(trend.value)}%
+                {typeof trend.value === "number"
+                  ? `${trend.isPositive ? "+" : "-"}${Math.abs(trend.value)}%`
+                  : trend.value}
               </span>
             )}
             {subtitle && <span className="text-slate-500">{subtitle}</span>}

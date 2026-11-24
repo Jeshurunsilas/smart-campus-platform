@@ -148,6 +148,34 @@ export default function FacultyDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <Link href="/faculty/courses/create">
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md font-semibold"
+              leftIcon={<PlusCircle className="w-4 h-4" />}
+            >
+              Create Course
+            </Button>
+          </Link>
+          <Link href="/faculty/courses">
+            <Button
+              variant="outline"
+              size="md"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+            >
+              My Courses
+            </Button>
+          </Link>
+          <Link href="/faculty/course-requests">
+            <Button
+              variant="outline"
+              size="md"
+              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+            >
+              Course Requests
+            </Button>
+          </Link>
           <Link href="/faculty/requests/new">
             <Button
               variant="teal"
@@ -155,15 +183,6 @@ export default function FacultyDashboardPage() {
               leftIcon={<PlusCircle className="w-4 h-4" />}
             >
               Report Issue
-            </Button>
-          </Link>
-          <Link href="/faculty/requests">
-            <Button
-              variant="outline"
-              size="md"
-              className="bg-white/10 text-white border-white/20 hover:bg-white/20"
-            >
-              Request History
             </Button>
           </Link>
         </div>
